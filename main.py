@@ -33,7 +33,6 @@ line_x2_b, line_y2_b = 1080, 720
 # cap.set(4,720)
 
 car_positions = {}
-current_car_speed = {}
 
 coco_classes = [
     "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
@@ -132,28 +131,24 @@ while True:
 
         if id not in car_positions:
             car_positions[id] = {'position': (cx, cy), 'timestamp': frame_time, 'speed': 0}
-            current_car_speed[id] = [0]
         else:
             # Calculate the distance and time difference
             prev_position = car_positions[id]['position']
             prev_timestamp = car_positions[id]['timestamp']
             distance = math.sqrt((prev_position[0] - cx) ** 2 + (prev_position[1] - cy) ** 2)
-            time_diff = frame_time - prev_timestamp
             # Calculate the speed in pixels per second
-            if distance > 5:
-
+            if distance > 18:
+                time_diff = frame_time - prev_timestamp
                 speed = distance / time_diff
-                avg_speed.append(speed)
 
                 # Convert the speed from pixels per second to a more meaningful unit, e.g., km/h or mph
                 # Based on the Assumption that the video represents an Urban District Street of Florida, USA
                 # Where the average speed limit is 35 m/ph
                 # Update the car position, timestamp, and speed
+                avg_speed.append(speed)
                 conversion_factor =  35 / (sum(avg_speed)/len(avg_speed))
                 car_speed_mgh = conversion_factor * speed
-                current_car_speed[id].append(car_speed_mgh)
-                car_speed = sum(current_car_speed[id])/len(current_car_speed[id])
-                car_positions[id] = {'position': (cx, cy), 'timestamp': frame_time, 'speed': car_speed}
+                car_positions[id] = {'position': (cx, cy), 'timestamp': frame_time, 'speed': car_speed_mgh}
             else:
                 car_positions[id] = {'position': (cx, cy), 'timestamp': frame_time, 'speed': 0}
             
