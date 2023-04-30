@@ -33,6 +33,7 @@ line_x2_b, line_y2_b = 1080, 720
 # cap.set(4,720)
 
 car_positions = {}
+current_car_speed = {}
 
 coco_classes = [
     "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
@@ -56,6 +57,7 @@ limits = [400,297,673,297]
 # Object Tracker 
 tracker = Sort(max_age=30,min_hits=3, iou_threshold=0.3)
 totalCars = []
+avg_speed = []
 
 carsFromLeft = []
 carsFromRight = []
@@ -115,11 +117,13 @@ while True:
         cv2.circle(frame,(cx,cy),1,(255,0,255),cv2.FILLED)
 
         if line_y1_b < cy < line_y2_b and line_x1_b - 15 < cx < line_x2_b + 15 :
+            exit_time = frame_time
             if carsFromRight.count(id) == 0:
                 carsFromRight.append(id)
 
 
         if  line_y1_a  < cy < line_y2_a  and line_x1_a - 15 < cx < line_x2_a + 15:
+            entry_time = frame_time
             if carsFromLeft.count(id) == 0 :
                 carsFromLeft.append(id)
 
@@ -128,6 +132,7 @@ while True:
 
         if id not in car_positions:
             car_positions[id] = {'position': (cx, cy), 'timestamp': frame_time, 'speed': 0}
+            current_car_speed[id] = [0]
         else:
             # Calculate the distance and time difference
             prev_position = car_positions[id]['position']
@@ -135,15 +140,23 @@ while True:
             distance = math.sqrt((prev_position[0] - cx) ** 2 + (prev_position[1] - cy) ** 2)
             time_diff = frame_time - prev_timestamp
             # Calculate the speed in pixels per second
-            speed = distance / time_diff
+            if distance > 5:
 
-            # Update the car position, timestamp, and speed
-            car_positions[id] = {'position': (cx, cy), 'timestamp': frame_time, 'speed': speed}
+                speed = distance / time_diff
+                avg_speed.append(speed)
 
-        #     # Convert the speed from pixels per second to a more meaningful unit, e.g., km/h or mph
-        #     # You need to know the conversion factor (e.g., how many pixels correspond to 1 meter)
-        #     # speed_kmh = speed_pixels_per_second * conversion_factor * 3.6
-
+                # Convert the speed from pixels per second to a more meaningful unit, e.g., km/h or mph
+                # Based on the Assumption that the video represents an Urban District Street of Florida, USA
+                # Where the average speed limit is 35 m/ph
+                # Update the car position, timestamp, and speed
+                conversion_factor =  35 / (sum(avg_speed)/len(avg_speed))
+                car_speed_mgh = conversion_factor * speed
+                current_car_speed[id].append(car_speed_mgh)
+                car_speed = sum(current_car_speed[id])/len(current_car_speed[id])
+                car_positions[id] = {'position': (cx, cy), 'timestamp': frame_time, 'speed': car_speed}
+            else:
+                car_positions[id] = {'position': (cx, cy), 'timestamp': frame_time, 'speed': 0}
+            
         # Display the speed of the vehicle
         label = f'Speed : {car_positions[id]["speed"]:.2f}'
         labelSize, baseLine = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
